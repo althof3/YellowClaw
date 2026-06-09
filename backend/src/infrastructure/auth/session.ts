@@ -66,7 +66,7 @@ export function parseSignedToken(req: Request): string {
 export function setSessionCookie(res: Response, token: string): void {
   res.cookie(sessionCookieName, `${token}.${sign(token)}`, {
     httpOnly: true,
-    sameSite: "none",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: sessionMaxAgeMs,
     path: "/"
