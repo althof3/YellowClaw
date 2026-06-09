@@ -25,15 +25,9 @@ OPENROUTER_MODEL=openai/gpt-4.1-mini
 DATABASE_URL=postgresql://yellowclaw:yellowclaw@localhost:5432/yellowclaw
 ```
 
-## Run Migrations
+## 1. Run Migrations
 
-Local:
-
-```bash
-npm run migrate
-```
-
-Docker:
+Local Docker:
 
 ```bash
 docker compose run --rm migrate
@@ -41,17 +35,7 @@ docker compose run --rm migrate
 
 Migrations are manual on purpose. Backend startup does not auto-apply schema changes.
 
-## Run
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-The frontend runs on port `3000` through CRA. The backend runs on port `4000`; CRA proxies `/api/*` requests to it. Local mode expects a running Postgres instance that matches `DATABASE_URL`.
-
-## Run With Docker
+## 2. Run With Docker
 
 ```bash
 docker compose up --build
