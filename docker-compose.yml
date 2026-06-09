@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: yellowclaw-postgres
+    environment:
+      POSTGRES_DB: yellowclaw
+      POSTGRES_USER: yellowclaw
+      POSTGRES_PASSWORD: yellowclaw
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yellowclaw -d yellowclaw"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: yellowclaw-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      SESSION_SECRET: replace-with-a-long-random-secret
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4.1-mini}
+      DATABASE_URL: postgresql://yellowclaw:yellowclaw@postgres:5432/yellowclaw
+    ports:
+      - "4000:4000"
+
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4.1-mini}
+      DATABASE_URL: postgresql://yellowclaw:yellowclaw@postgres:5432/yellowclaw
+    command: ["npm", "run", "migrate", "-w", "backend"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: yellowclaw-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres_data:
