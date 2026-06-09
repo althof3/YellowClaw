@@ -1,7 +1,8 @@
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { Brand } from "../../components/common/Brand";
 import { initials } from "../../shared/initials";
 import type { CreateProjectPayload, Project, User } from "../../shared/types";
+import { CreateAgentModal } from "./CreateAgentModal";
 
 interface SidebarProps {
   user: User;
@@ -12,45 +13,16 @@ interface SidebarProps {
 }
 
 export function Sidebar({ user, projects, activeProjectId, onSelectProject, onCreateProject }: SidebarProps) {
-  const [newAgentName, setNewAgentName] = useState("");
-  const [showCreateForm, setShowCreateForm] = useState(false);
-
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!newAgentName.trim()) return;
-    await onCreateProject({
-      name: newAgentName,
-      systemPrompt: "You qualify inbound leads. Ask one question at a time and summarize the next best action."
-    });
-    setNewAgentName("");
-    setShowCreateForm(false);
-  }
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   return (
     <aside className="sidebar">
       <div className="sidebar-head">
         <Brand />
-        <button className="icon-btn" onClick={() => setShowCreateForm((value) => !value)} type="button" title="New Agent">
+        <button className="icon-btn" onClick={() => setShowCreateModal(true)} type="button" title="New Agent">
           +
         </button>
       </div>
-
-      {showCreateForm && (
-        <form className="create-agent" onSubmit={handleCreate}>
-          <div className="field">
-            <label htmlFor="newAgentName">Agent name</label>
-            <input
-              id="newAgentName"
-              value={newAgentName}
-              onChange={(event) => setNewAgentName(event.target.value)}
-              placeholder="Sales Qualifier"
-            />
-          </div>
-          <button className="primary-btn" type="submit">
-            New Agent
-          </button>
-        </form>
-      )}
 
       <div className="agent-list">
         {projects.map((project) => (
@@ -68,15 +40,17 @@ export function Sidebar({ user, projects, activeProjectId, onSelectProject, onCr
         ))}
       </div>
 
-      {!showCreateForm && (
-        <button className="primary-btn full-width" onClick={() => setShowCreateForm(true)} type="button">
-          New Agent
-        </button>
-      )}
+      <button className="primary-btn full-width" onClick={() => setShowCreateModal(true)} type="button">
+        New Agent
+      </button>
 
       <div className="sidebar-foot">
         <strong>{user.email}</strong>
       </div>
+
+      {showCreateModal && (
+        <CreateAgentModal onClose={() => setShowCreateModal(false)} onCreate={onCreateProject} />
+      )}
     </aside>
   );
 }

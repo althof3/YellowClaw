@@ -80,10 +80,28 @@ export function useYellowClawApp() {
   }
 
   async function handleCreateProject(payload: CreateProjectPayload) {
-    const response = await createProject(payload);
+    const { files, ...projectPayload } = payload;
+    let response: { project: Project };
+    try {
+      response = await createProject(projectPayload);
+    } catch (error) {
+      setNotice({ message: error instanceof Error ? error.message : "Agent creation failed" });
+      throw error;
+    }
     setProjects((items) => [response.project, ...items]);
     setActiveProjectId(response.project.id);
     setMessages([]);
+
+    if (files && files.length) {
+      try {
+        await Promise.all(files.map((file) => uploadProjectFile(response.project.id, file)));
+        setNotice({ message: `Agent created with ${files.length} file(s).`, success: true });
+      } catch (error) {
+        setNotice({ message: error instanceof Error ? error.message : "Agent created, but file upload failed" });
+      }
+      return;
+    }
+
     setNotice({ message: "Agent created.", success: true });
   }
 

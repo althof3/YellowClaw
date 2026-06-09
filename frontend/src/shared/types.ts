@@ -36,6 +36,7 @@ export interface AuthPayload {
 export interface CreateProjectPayload {
   name: string;
   systemPrompt: string;
+  files?: File[];
 }
 
 export interface SaveProjectPayload {
