@@ -10,6 +10,7 @@ interface WorkspaceProps {
   messages: Message[];
   notice: Notice | null;
   isBusy: boolean;
+  isLoadingMessages: boolean;
   onLogout: () => Promise<void>;
   onSelectProject: (projectId: string) => Promise<void>;
   onCreateProject: (payload: CreateProjectPayload) => Promise<void>;
@@ -25,6 +26,7 @@ export function Workspace({
   messages,
   notice,
   isBusy,
+  isLoadingMessages,
   onLogout,
   onSelectProject,
   onCreateProject,
@@ -48,6 +50,7 @@ export function Workspace({
         activeProject={activeProject}
         messages={messages}
         isBusy={isBusy}
+        isLoadingMessages={isLoadingMessages}
         onLogout={onLogout}
         onSendMessage={onSendMessage}
       />

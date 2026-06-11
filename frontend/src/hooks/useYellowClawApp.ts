@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authenticate, getCurrentUser, logout } from "../services/authService";
 import { sendMessage } from "../services/chatService";
 import { uploadProjectFile } from "../services/fileService";
@@ -22,10 +22,24 @@ export function useYellowClawApp() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const messageRequestId = useRef(0);
 
   async function loadProjectMessages(projectId: string) {
-    const payload = await listMessages(projectId);
-    setMessages(payload.messages);
+    const requestId = ++messageRequestId.current;
+    setMessages([]);
+    setIsLoadingMessages(true);
+    try {
+      const payload = await listMessages(projectId);
+      if (requestId === messageRequestId.current) {
+        setMessages(payload.messages);
+      }
+    } finally {
+      if (requestId === messageRequestId.current) {
+        setIsLoadingMessages(false);
+      }
+    }
   }
 
   async function loadProjects(preferredProjectId?: string) {
@@ -33,24 +47,59 @@ export function useYellowClawApp() {
     setProjects(payload.projects);
     const nextProjectId = preferredProjectId || activeProjectId || payload.projects[0]?.id || null;
     setActiveProjectId(nextProjectId);
-    if (nextProjectId) await loadProjectMessages(nextProjectId);
+    if (nextProjectId) {
+      await loadProjectMessages(nextProjectId);
+    } else {
+      setMessages([]);
+      setIsLoadingMessages(false);
+    }
   }
 
   useEffect(() => {
-    getCurrentUser()
-      .then(async (payload) => {
+    let isMounted = true;
+
+    async function initialize() {
+      try {
+        const payload = await getCurrentUser();
+        if (!isMounted) return;
         setUser(payload.user);
-        if (!payload.user) return;
+        if (!payload.user) {
+          setIsLoadingMessages(false);
+          return;
+        }
+
         const projectsPayload = await listProjects();
+        if (!isMounted) return;
         setProjects(projectsPayload.projects);
         const nextProjectId = projectsPayload.projects[0]?.id || null;
         setActiveProjectId(nextProjectId);
         if (nextProjectId) {
-          const messagesPayload = await listMessages(nextProjectId);
-          setMessages(messagesPayload.messages);
+          setIsLoadingMessages(true);
+          setIsInitializing(false);
+          try {
+            await loadProjectMessages(nextProjectId);
+          } catch (error) {
+            if (isMounted) {
+              setNotice({ message: error instanceof Error ? error.message : "Chat history failed to load" });
+            }
+          }
+        } else {
+          setIsLoadingMessages(false);
         }
-      })
-      .catch(() => setUser(null));
+      } catch {
+        if (isMounted) {
+          setUser(null);
+          setIsLoadingMessages(false);
+        }
+      } finally {
+        if (isMounted) setIsInitializing(false);
+      }
+    }
+
+    void initialize();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   async function handleAuthSubmit(payload: AuthPayload) {
@@ -58,6 +107,7 @@ export function useYellowClawApp() {
       const response = await authenticate(authMode, payload);
       setUser(response.user);
       setNotice(null);
+      setIsLoadingMessages(true);
       await loadProjects(response.project?.id);
     } catch (error) {
       setNotice({ message: error instanceof Error ? error.message : "Authentication failed" });
@@ -71,6 +121,7 @@ export function useYellowClawApp() {
     setActiveProjectId(null);
     setMessages([]);
     setNotice(null);
+    setIsLoadingMessages(false);
   }
 
   async function handleSelectProject(projectId: string) {
@@ -165,6 +216,8 @@ export function useYellowClawApp() {
     messages,
     notice,
     isBusy,
+    isInitializing,
+    isLoadingMessages,
     handleAuthSubmit,
     handleLogout,
     handleSelectProject,

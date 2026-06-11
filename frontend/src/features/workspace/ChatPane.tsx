@@ -7,11 +7,20 @@ interface ChatPaneProps {
   activeProject: Project | null;
   messages: Message[];
   isBusy: boolean;
+  isLoadingMessages: boolean;
   onLogout: () => Promise<void>;
   onSendMessage: (message: string) => Promise<void>;
 }
 
-export function ChatPane({ user, activeProject, messages, isBusy, onLogout, onSendMessage }: ChatPaneProps) {
+export function ChatPane({
+  user,
+  activeProject,
+  messages,
+  isBusy,
+  isLoadingMessages,
+  onLogout,
+  onSendMessage
+}: ChatPaneProps) {
   const [messageDraft, setMessageDraft] = useState("");
   const messagesRef = useRef<HTMLDivElement>(null);
 
@@ -20,7 +29,7 @@ export function ChatPane({ user, activeProject, messages, isBusy, onLogout, onSe
   }, [messages, isBusy]);
 
   async function sendDraft() {
-    if (!messageDraft.trim()) return;
+    if (isLoadingMessages || !messageDraft.trim()) return;
     const message = messageDraft.trim();
     setMessageDraft("");
     await onSendMessage(message);
@@ -53,7 +62,22 @@ export function ChatPane({ user, activeProject, messages, isBusy, onLogout, onSe
       </header>
 
       <div className="messages" ref={messagesRef}>
-        {messages.length ? (
+        {isLoadingMessages ? (
+          <div className="chat-skeleton" aria-label="Loading chat history" aria-live="polite">
+            <div className="chat-skeleton-row">
+              <span className="chat-skeleton-avatar" />
+              <span className="chat-skeleton-bubble chat-skeleton-bubble-wide" />
+            </div>
+            <div className="chat-skeleton-row user">
+              <span className="chat-skeleton-avatar" />
+              <span className="chat-skeleton-bubble chat-skeleton-bubble-short" />
+            </div>
+            <div className="chat-skeleton-row">
+              <span className="chat-skeleton-avatar" />
+              <span className="chat-skeleton-bubble" />
+            </div>
+          </div>
+        ) : messages.length ? (
           <>
             {messages.map((message) => (
               <MessageBubble key={message.id} message={message} />
@@ -86,15 +110,15 @@ export function ChatPane({ user, activeProject, messages, isBusy, onLogout, onSe
             onChange={(event) => setMessageDraft(event.target.value)}
             onKeyDown={handleDraftKeyDown}
             placeholder="Message this agent"
-            disabled={!activeProject || isBusy}
+            disabled={!activeProject || isBusy || isLoadingMessages}
           />
           <span className="composer-hint">
             <span><kbd>Enter</kbd> to send</span>
             <span><kbd>Shift+Enter</kbd> for new line</span>
           </span>
         </div>
-        <button className="primary-btn" type="submit" disabled={!activeProject || isBusy}>
-          {isBusy ? "Sending" : "Send"}
+        <button className="primary-btn" type="submit" disabled={!activeProject || isBusy || isLoadingMessages}>
+          {isLoadingMessages ? "Loading" : isBusy ? "Sending" : "Send"}
         </button>
       </form>
     </section>
