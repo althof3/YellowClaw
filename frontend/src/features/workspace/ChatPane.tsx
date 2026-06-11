@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import type { Message, Project, User } from "../../shared/types";
 import { AiIcon, MessageBubble } from "./MessageBubble";
 
@@ -19,12 +19,22 @@ export function ChatPane({ user, activeProject, messages, isBusy, onLogout, onSe
     messagesRef.current?.scrollTo({ top: messagesRef.current.scrollHeight });
   }, [messages, isBusy]);
 
-  async function handleChat(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function sendDraft() {
     if (!messageDraft.trim()) return;
     const message = messageDraft.trim();
     setMessageDraft("");
     await onSendMessage(message);
+  }
+
+  async function handleChat(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await sendDraft();
+  }
+
+  function handleDraftKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    void sendDraft();
   }
 
   return (
@@ -70,12 +80,19 @@ export function ChatPane({ user, activeProject, messages, isBusy, onLogout, onSe
       </div>
 
       <form className="composer" onSubmit={handleChat}>
-        <textarea
-          value={messageDraft}
-          onChange={(event) => setMessageDraft(event.target.value)}
-          placeholder="Message this agent"
-          disabled={!activeProject || isBusy}
-        />
+        <div className="composer-field">
+          <textarea
+            value={messageDraft}
+            onChange={(event) => setMessageDraft(event.target.value)}
+            onKeyDown={handleDraftKeyDown}
+            placeholder="Message this agent"
+            disabled={!activeProject || isBusy}
+          />
+          <span className="composer-hint">
+            <span><kbd>Enter</kbd> to send</span>
+            <span><kbd>Shift+Enter</kbd> for new line</span>
+          </span>
+        </div>
         <button className="primary-btn" type="submit" disabled={!activeProject || isBusy}>
           {isBusy ? "Sending" : "Send"}
         </button>
