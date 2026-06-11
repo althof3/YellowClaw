@@ -129,7 +129,15 @@ export function useYellowClawApp() {
     try {
       const response = await sendMessage(activeProjectId, message);
       setMessages((items) => items.filter((item) => !item.id.startsWith("temp_")).concat(response.messages));
-      await loadProjects(activeProjectId);
+      const updatedAt = response.messages.at(-1)?.createdAt || new Date().toISOString();
+      setProjects((items) => {
+        const activeProject = items.find((item) => item.id === activeProjectId);
+        if (!activeProject) return items;
+        return [
+          { ...activeProject, updatedAt },
+          ...items.filter((item) => item.id !== activeProjectId)
+        ];
+      });
     } catch (error) {
       setMessages((items) => items.filter((item) => !item.id.startsWith("temp_")));
       setNotice({ message: error instanceof Error ? error.message : "Chat failed" });
